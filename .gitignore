@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.ruff_cache/
+
+# Node
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Env and editor
+.env
+.env.local
+.DS_Store
+.idea/
+.vscode/
+
+# Deploy
+.vercel/

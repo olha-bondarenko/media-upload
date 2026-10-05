@@ -1,0 +1,88 @@
+:root {
+  --bg: #f7f7f8;
+  --surface: #ffffff;
+  --text: #1c1d21;
+  --muted: #62646b;
+  --border: #e1e2e6;
+  --accent: #3b5bdb;
+  --ok: #2b8a3e;
+  --error: #c92a2a;
+
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  line-height: 1.5;
+  color: var(--text);
+  background: var(--bg);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+a {
+  color: var(--accent);
+}
+
+.shell__header {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 0.75rem 1.5rem;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.shell__brand {
+  font-weight: 600;
+}
+
+.shell__header nav {
+  display: flex;
+  gap: 1rem;
+  flex: 1;
+}
+
+.shell__header nav a {
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.shell__header nav a.active {
+  color: var(--text);
+  font-weight: 500;
+}
+
+.shell__main {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+
+.api-status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
+.api-status__dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--border);
+}
+
+.api-status[data-state='online'] .api-status__dot {
+  background: var(--ok);
+}
+
+.api-status[data-state='offline'] .api-status__dot {
+  background: var(--error);
+}
