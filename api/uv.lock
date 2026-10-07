@@ -345,7 +345,7 @@ wheels = [
 ]
 
 [[package]]
-name = "media-console-api"
+name = "media-upload-api"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [

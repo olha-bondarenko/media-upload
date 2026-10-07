@@ -1,5 +1,5 @@
 [project]
-name = "media-console-api"
+name = "media-upload-api"
 version = "0.1.0"
 description = "API for the media upload: metadata, upload URLs and permissions"
 requires-python = ">=3.12"
