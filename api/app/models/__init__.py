@@ -1,6 +1,3 @@
-"""Database models.
+from app.models.media import Media
 
-Import every model here so Alembic's autogenerate can see it, for example:
-
-    from app.models.media import Media  # noqa: F401
-"""
+__all__ = ["Media"]
