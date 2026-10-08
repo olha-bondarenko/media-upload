@@ -23,11 +23,3 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
 
   return (await response.json()) as T
 }
-
-export interface HealthResponse {
-  status: string
-}
-
-export function getHealth(): Promise<HealthResponse> {
-  return apiFetch<HealthResponse>('/health')
-}
