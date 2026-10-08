@@ -4,30 +4,31 @@ import { describe, expect, it, vi } from 'vitest'
 import { App } from './App'
 import { renderApp } from './test/render'
 
-function stubHealth(response: Promise<Response>) {
-  vi.stubGlobal('fetch', vi.fn(() => response))
+function stubFetch() {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(() =>
+      Promise.resolve(
+        new Response(JSON.stringify({ items: [], total: 0, limit: 20, offset: 0 }), {
+          status: 200,
+        }),
+      ),
+    ),
+  )
 }
 
 describe('App', () => {
-  it('shows the library page and reports the API as connected', async () => {
-    stubHealth(Promise.resolve(new Response(JSON.stringify({ status: 'ok' }), { status: 200 })))
+  it('shows the library page', async () => {
+    stubFetch()
 
     renderApp(<App />)
 
     expect(screen.getByRole('heading', { name: 'Library' })).toBeInTheDocument()
-    expect(await screen.findByText('API connected')).toBeInTheDocument()
-  })
-
-  it('reports the API as unreachable when the health check fails', async () => {
-    stubHealth(Promise.reject(new TypeError('Failed to fetch')))
-
-    renderApp(<App />)
-
-    expect(await screen.findByText('API unreachable')).toBeInTheDocument()
+    expect(await screen.findByText('No media yet.')).toBeInTheDocument()
   })
 
   it('shows a not-found page for unknown routes', () => {
-    stubHealth(Promise.resolve(new Response(JSON.stringify({ status: 'ok' }), { status: 200 })))
+    stubFetch()
 
     renderApp(<App />, { route: '/nope' })
 
