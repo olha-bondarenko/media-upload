@@ -1,41 +1,24 @@
-export enum MediaStatus {
-  Uploading = "uploading",
-  Processing = "processing",
-  Ready = "ready",
-  Failed = "failed",
+import { apiFetch } from './api'
+import type { Media, MediaList, MediaListParams, MediaUpdate } from './types/media'
+
+export function listMedia(params: MediaListParams = {}): Promise<MediaList> {
+  const query = new URLSearchParams()
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined && value !== '') query.set(key, String(value))
+  }
+  const qs = query.toString()
+  return apiFetch<MediaList>(qs ? `/media?${qs}` : '/media')
 }
 
-export type Media = {
-  id: string,
-  title: string,
-  description: string,
-  tags: string[],
-  filename: string,
-  content_type: string,
-  size_bytes: number,
-  status: MediaStatus,
-  duration_seconds: number,
-  playback_url: string,
-  created_at: string,
-  updated_at: string,
+export function getMedia(id: string): Promise<Media> {
+  const encodedId = encodeURIComponent(id)
+  return apiFetch<Media>(`/media/${encodedId}`)
 }
 
-export type MediaList = {
-  items: Media[],
-  total: number,
-  limit: number,
-  offset: number,
-}
-
-export type MediaListParams = {
-  q?: string,
-  status?: MediaStatus,
-  limit?: number,
-  offset?: number,
-}
-
-export type MediaUpdate = {
-  title?: string,
-  description?: string,
-  tags?: string[],
+export function updateMedia(id: string, changes: MediaUpdate): Promise<Media> {
+  const encodedId = encodeURIComponent(id)
+  return apiFetch<Media>(`/media/${encodedId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(changes),
+  })
 }
