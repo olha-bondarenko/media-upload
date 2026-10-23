@@ -1,68 +1,46 @@
 import { useQuery } from '@tanstack/react-query'
 
-import {
-  Table,
-  TableBody,
-  TableCaption,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 import { listMedia } from '@/lib/media'
 import { PageHeader } from '@/components/PageHeader'
-import { StatusBadge } from '@/components/StatusBadge'
 import { MediaTableSkeleton } from '@/components/MediaTableSkeleton'
-
-function formatSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-}
+import { MediaTable } from '@/components/MediaTable'
+import { useDelayedFlag } from '@/hooks/useDelayedFlag'
+import { Button } from '@/components/ui/button'
 
 export function LibraryPage() {
-  const { data, isPending, isError, error } = useQuery({
+  const { data, isPending, isError, error, refetch, isFetching } = useQuery({
     queryKey: ['media', 'list'],
     queryFn: () => listMedia(),
   })
+
+  const isSlow = useDelayedFlag(isPending, 5000)
 
   return (
     <>
       <PageHeader title="Library" description="Browse, search and manage your uploaded media." />
       {isPending ? (
-        <MediaTableSkeleton />
+        <div className="space-y-4">
+          <MediaTableSkeleton />
+          {isSlow && (
+            <p role="status" className="text-sm text-muted-foreground">
+              Waking up the server... Please, wait.
+            </p>
+          )}
+        </div>
       ) : isError ? (
-        <p role="alert">Couldn't load media: {error.message}</p>
+        <div
+          role="alert"
+          className="flex flex-col items-start gap-3 rounded-lg border border-destructive/30 bg-destructive/5 p-4"
+        >
+          <p className="text-sm">Couldn't load media. {error.message}</p>
+          <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
+            {isFetching ? 'Retrying…' : 'Try again'}
+          </Button>
+        </div>
       ) : data.items.length === 0 ? (
-        <p>No media yet.</p>
+        <p className="text-sm text-muted-foreground">No media yet.</p>
       ) : (
-        <Table>
-          <TableCaption>
-            Showing {data.items.length} of {data.total} uploads
-          </TableCaption>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Title</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Size</TableHead>
-              <TableHead className="text-right">Uploaded</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {data.items.map((media) => (
-              <TableRow key={media.id}>
-                <TableCell className="font-medium">{media.title}</TableCell>
-                <TableCell>
-                  <StatusBadge status={media.status} />
-                </TableCell>
-                <TableCell className="text-right">{formatSize(media.size_bytes)}</TableCell>
-                <TableCell className="text-right">
-                  {new Date(media.created_at).toLocaleDateString()}
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+        <MediaTable items={data.items} total={data.total} />
       )}
     </>
   )
