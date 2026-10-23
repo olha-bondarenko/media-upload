@@ -10,6 +10,26 @@ export class ApiError extends Error {
   }
 }
 
+async function readErrorMessage(response: Response): Promise<string> {
+  try {
+    const body: unknown = await response.json()
+    if (body && typeof body === 'object' && 'detail' in body) {
+      const { detail } = body as { detail: unknown }
+      if (typeof detail === 'string') return detail
+      if (Array.isArray(detail) && detail.length > 0) {
+        return detail
+          .map((item) =>
+            item && typeof item === 'object' && 'msg' in item ? String(item.msg) : String(item),
+          )
+          .join('; ')
+      }
+    }
+  } catch {
+    // The body wasn't JSON; fall through to the generic message.
+  }
+  return `Request failed with status ${response.status}`
+}
+
 /** Calls the API and returns the parsed JSON body, or throws ApiError on a non-2xx response. */
 export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_URL}${path}`, {
@@ -18,7 +38,7 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
   })
 
   if (!response.ok) {
-    throw new ApiError(response.status, `Request to ${path} failed with status ${response.status}`)
+    throw new ApiError(response.status, await readErrorMessage(response))
   }
 
   return (await response.json()) as T
