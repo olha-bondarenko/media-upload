@@ -12,17 +12,10 @@ import { StatusBadge } from './StatusBadge'
 import { formatBytes, formatDate, formatDuration } from '@/lib/format'
 import { Link } from 'react-router-dom'
 
-interface MediaTableProps {
-  items: Media[]
-  total: number
-}
-
-export function MediaTable({ items, total }: MediaTableProps) {
+export function MediaTable({ items }: {items: Media[]}) {
   return (
     <Table>
-      <TableCaption>
-        Showing {items.length} of {total} uploads
-      </TableCaption>
+    <TableCaption className="sr-only">Media library</TableCaption>
       <TableHeader>
         <TableRow>
           <TableHead scope="col">Title</TableHead>
