@@ -5,7 +5,7 @@ import type { MediaStatus } from '@/lib/types/media'
 
 type BadgeVariant = ComponentProps<typeof Badge>['variant']
 
-const STATUS_STYLES = {
+export const STATUS_STYLES = {
   uploading: { label: 'Uploading', variant: 'secondary' },
   processing: { label: 'Processing', variant: 'warning' },
   ready: { label: 'Ready', variant: 'success' },

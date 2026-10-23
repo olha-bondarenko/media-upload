@@ -1,5 +1,3 @@
-export type MediaStatus = 'uploading' | 'processing' | 'ready' | 'failed'
-
 export type Media = {
   id: string
   title: string
@@ -34,3 +32,6 @@ export type MediaUpdate = {
   description?: string
   tags?: string[]
 }
+
+export const MEDIA_STATUSES = ['uploading', 'processing', 'ready', 'failed'] as const
+export type MediaStatus = (typeof MEDIA_STATUSES)[number]

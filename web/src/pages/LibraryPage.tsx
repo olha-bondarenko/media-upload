@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, keepPreviousData } from '@tanstack/react-query'
 
 import { listMedia } from '@/lib/media'
 import { PageHeader } from '@/components/PageHeader'
@@ -6,11 +6,17 @@ import { MediaTableSkeleton } from '@/components/MediaTableSkeleton'
 import { MediaTable } from '@/components/MediaTable'
 import { useDelayedFlag } from '@/hooks/useDelayedFlag'
 import { Button } from '@/components/ui/button'
+import { useLibraryFilters } from '@/hooks/useLibraryFilters'
+import { LibraryFilters } from '@/components/LibraryFilters'
 
 export function LibraryPage() {
-  const { data, isPending, isError, error, refetch, isFetching } = useQuery({
-    queryKey: ['media', 'list'],
-    queryFn: () => listMedia(),
+  const filters = useLibraryFilters()
+  const params = { q: filters.q, status: filters.status }
+
+  const { data, isPending, isError, error, refetch, isFetching, isPlaceholderData } = useQuery({
+    queryKey: ['media', 'list', params],
+    queryFn: () => listMedia(params),
+    placeholderData: keepPreviousData,
   })
 
   const isSlow = useDelayedFlag(isPending, 5000)
@@ -18,6 +24,15 @@ export function LibraryPage() {
   return (
     <>
       <PageHeader title="Library" description="Browse, search and manage your uploaded media." />
+      <LibraryFilters
+        q={filters.q}
+        status={filters.status}
+        hasFilters={filters.hasFilters}
+        onQueryChange={filters.setQuery}
+        onStatusChange={filters.setStatus}
+        onClear={filters.clear}
+      />
+
       {isPending ? (
         <div className="space-y-4">
           <MediaTableSkeleton />
@@ -38,9 +53,13 @@ export function LibraryPage() {
           </Button>
         </div>
       ) : data.items.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No media yet.</p>
+        <p className="text-sm text-muted-foreground">
+          {filters.hasFilters ? 'No media matches your filters.' : 'No media yet.'}
+        </p>
       ) : (
-        <MediaTable items={data.items} total={data.total} />
+        <div className={isPlaceholderData ? 'opacity-60 transition-opacity' : undefined}>
+          <MediaTable items={data.items} total={data.total} />
+        </div>
       )}
     </>
   )
