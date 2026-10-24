@@ -20,6 +20,7 @@ class Media(Base):
     size_bytes: Mapped[int] = mapped_column(BigInteger)
     duration_seconds: Mapped[float | None] = mapped_column(Float, default=None)
     storage_key: Mapped[str | None] = mapped_column(String(500), default=None)
+    upload_id: Mapped[str | None] = mapped_column(String(1024), default=None)
     source_url: Mapped[str | None] = mapped_column(String(1000), default=None)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), index=True
