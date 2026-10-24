@@ -44,3 +44,17 @@ class UploadStartOut(BaseModel):
     media_id: uuid.UUID
     part_size: int
     part_count: int
+
+class PartUrlsRequest(BaseModel):
+    """The part numbers the browser wants upload URLs for."""
+
+    part_numbers: list[int] = Field(min_length=1, max_length=100)
+
+
+class PartUrl(BaseModel):
+    part_number: int
+    url: str
+
+
+class PartUrlsOut(BaseModel):
+    parts: list[PartUrl]

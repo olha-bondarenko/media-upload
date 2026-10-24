@@ -8,7 +8,14 @@ from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.models.media import Media
-from app.schemas.uploads import PART_SIZE, UploadStart, UploadStartOut
+from app.schemas.uploads import (
+    PART_SIZE,
+    PartUrl,
+    PartUrlsOut,
+    PartUrlsRequest,
+    UploadStart,
+    UploadStartOut,
+)
 from app.storage import Storage, get_storage
 
 router = APIRouter(prefix="/uploads", tags=["uploads"])
@@ -19,6 +26,14 @@ def safe_filename(filename: str) -> str:
     cleaned = re.sub(r"[^A-Za-z0-9._-]", "_", filename)[:100]
     return cleaned or "file"
 
+
+def get_uploading_media(media_id: uuid.UUID, db: Session) -> Media:
+    media = db.get(Media, media_id)
+    if media == None: 
+        raise HTTPException(status_code=404, detail="Upload not found")
+    if media.status != "uploading" or media.upload_id is None:
+        raise HTTPException(status_code=409, detail="This upload is no longer in progress")
+    return media
 
 @router.post("", response_model=UploadStartOut, status_code=201)
 def start_upload(
@@ -51,4 +66,29 @@ def start_upload(
         media_id=media_id,
         part_size=PART_SIZE,
         part_count=math.ceil(upload.size_bytes / PART_SIZE),
+    )
+
+@router.post("/{media_id}/parts", response_model=PartUrlsOut)
+def get_part_urls(
+    media_id: uuid.UUID,
+    request: PartUrlsRequest,
+    db: Session = Depends(get_db),
+    storage: Storage = Depends(get_storage),
+):
+    media = get_uploading_media(media_id, db)
+
+    part_count = math.ceil(media.size_bytes / PART_SIZE)
+    if any(number < 1 or number > part_count for number in request.part_numbers):
+        raise HTTPException(
+            status_code=422, detail=f"Part numbers must be between 1 and {part_count}"
+        )
+
+    return PartUrlsOut(
+        parts=[
+            PartUrl(
+                part_number=number,
+                url=storage.presign_upload_part(media.storage_key, media.upload_id, number),
+            )
+            for number in request.part_numbers
+        ]
     )
