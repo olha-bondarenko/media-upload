@@ -45,6 +45,7 @@ class UploadStartOut(BaseModel):
     part_size: int
     part_count: int
 
+
 class PartUrlsRequest(BaseModel):
     """The part numbers the browser wants upload URLs for."""
 
@@ -58,3 +59,14 @@ class PartUrl(BaseModel):
 
 class PartUrlsOut(BaseModel):
     parts: list[PartUrl]
+
+
+class CompletedPartIn(BaseModel):
+    part_number: int = Field(ge=1)
+    etag: str = Field(min_length=1, max_length=200)
+
+
+class UploadComplete(BaseModel):
+    """The parts the browser uploaded, with the ETag R2 returned for each."""
+
+    parts: list[CompletedPartIn] = Field(min_length=1)
