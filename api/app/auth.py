@@ -73,3 +73,8 @@ def require_role(*roles: Role):
         return user
 
     return check
+
+
+require_signed_in = require_role(*Role)
+require_editor = require_role(Role.EDITOR, Role.ADMIN)
+require_admin = require_role(Role.ADMIN)

@@ -1,13 +1,9 @@
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
-from app.auth import DEMO_USERS, Role, User, create_token, require_role
+from app.auth import DEMO_USERS, Role, User, create_token, require_signed_in
 
 router = APIRouter(prefix="/auth", tags=["auth"])
-
-require_signed_in = require_role(*Role)
-require_editor = require_role(Role.EDITOR, Role.ADMIN)
-require_admin = require_role(Role.ADMIN)
 
 
 class DemoLogin(BaseModel):

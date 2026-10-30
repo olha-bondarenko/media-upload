@@ -1,50 +1,8 @@
 import uuid
 
 import pytest
-from botocore.exceptions import ClientError, EndpointConnectionError
-
-from app.main import app
-from app.storage import get_storage
 
 VIDEO_26_MIB = 26_214_400  # three 10 MiB parts: 10 + 10 + 6
-
-
-class FakeUploadStorage:
-    """Stands in for R2: records every call so tests can check what the API asked for."""
-
-    def __init__(self) -> None:
-        self.created: list[tuple[str, str]] = []
-        self.completed: list[tuple[str, str, list]] = []
-        self.aborted: list[tuple[str, str]] = []
-        self.fail_create = False
-        self.fail_complete = False
-
-    def create_multipart_upload(self, key: str, content_type: str) -> str:
-        if self.fail_create:
-            raise EndpointConnectionError(endpoint_url="https://storage.test")
-        self.created.append((key, content_type))
-        return "upload-123"
-
-    def presign_upload_part(self, key: str, upload_id: str, part_number: int) -> str:
-        return f"https://storage.test/{key}?uploadId={upload_id}&partNumber={part_number}"
-
-    def complete_multipart_upload(self, key: str, upload_id: str, parts: list) -> None:
-        if self.fail_complete:
-            raise ClientError({"Error": {"Code": "InvalidPart"}}, "CompleteMultipartUpload")
-        self.completed.append((key, upload_id, parts))
-
-    def abort_multipart_upload(self, key: str, upload_id: str) -> None:
-        self.aborted.append((key, upload_id))
-
-    def presign_download(self, key: str) -> str:
-        return f"https://storage.test/{key}"
-
-
-@pytest.fixture
-def storage(client):
-    fake = FakeUploadStorage()
-    app.dependency_overrides[get_storage] = lambda: fake
-    return fake
 
 
 def start(client, filename="Demo day.mp4", size_bytes=5, content_type="video/mp4"):
