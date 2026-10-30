@@ -2,6 +2,7 @@ import { Clapperboard } from 'lucide-react'
 import { NavLink, Outlet } from 'react-router-dom'
 
 import { cn } from '@/lib/utils'
+import { UploadPanel } from './UploadPanel'
 
 function navLinkClass({ isActive }: { isActive: boolean }) {
   return cn(
@@ -40,6 +41,7 @@ export function AppShell() {
       <main id="main" className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
         <Outlet />
       </main>
+      <UploadPanel />
     </div>
   )
 }

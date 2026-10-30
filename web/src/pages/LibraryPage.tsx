@@ -10,14 +10,13 @@ import { useLibraryFilters } from '@/hooks/useLibraryFilters'
 import { LibraryFilters } from '@/components/LibraryFilters'
 import { Pagination } from '@/components/Pagination'
 import { UploadButton } from '@/components/UploadButton'
-import { useUploadQueue } from '@/hooks/useUploadQueue'
-import { UploadList } from '@/components/UploadList'
+import { useUploads } from '@/contexts/uploadsContext'
 
 const PAGE_SIZE = 10
 
 export function LibraryPage() {
   const filters = useLibraryFilters()
-  const uploads = useUploadQueue()
+  const uploads = useUploads()
   
   const params = {
     q: filters.q,
@@ -40,12 +39,6 @@ export function LibraryPage() {
         title="Library"
         description="Browse, search and manage your uploaded media."
         actions={<UploadButton onSelect={uploads.addFiles} />}
-      />
-      <UploadList
-        items={uploads.items}
-        onCancel={uploads.cancel}
-        onDismiss={uploads.dismiss}
-        onClearFinished={uploads.clearFinished}
       />
       <LibraryFilters
         q={filters.q}

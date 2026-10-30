@@ -5,6 +5,7 @@ import { BrowserRouter } from 'react-router-dom'
 
 import { App } from './App'
 import './index.css'
+import { UploadsProvider } from './contexts/UploadsProvider'
 
 const queryClient = new QueryClient()
 
@@ -12,7 +13,9 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <App />
+        <UploadsProvider>
+          <App />
+        </UploadsProvider>
       </BrowserRouter>
     </QueryClientProvider>
   </StrictMode>,
