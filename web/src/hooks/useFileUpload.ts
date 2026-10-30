@@ -23,7 +23,8 @@ export function useFileUpload() {
     try {
       const media = await uploadFile(file, {
         signal: controller.signal,
-        onProgress: (progress) => setState({ status: 'uploading', fileName: file.name, progress }),
+        onProgress: (uploadedBytes) =>
+          setState({ status: 'uploading', fileName: file.name, progress: uploadedBytes / file.size }),
       })
       setState({ status: 'done', media })
       queryClient.invalidateQueries({ queryKey: ['media', 'list'] })

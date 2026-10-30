@@ -2,6 +2,8 @@ import { apiFetch } from './api'
 import type { Media } from './types/media'
 import type { CompletedPart, PartUrl, UploadStartResponse } from './types/uploads'
 
+const PARALLEL_CHUNKS = 4
+
 function startUpload(file: File): Promise<UploadStartResponse> {
   return apiFetch('/uploads', {
     method: 'POST',
@@ -69,33 +71,72 @@ interface UploadOptions {
   signal?: AbortSignal
 }
 
-/** Runs the whole flow: start, upload each chunk in turn, complete. Cleans up on failure. */
-export async function uploadFile(file: File, { onProgress, signal }: UploadOptions = {}): Promise<Media> {
+/** Runs the whole flow: start, upload chunks in parallel, complete. Cleans up on failure. */
+export async function uploadFile(
+  file: File,
+  { onProgress, signal }: UploadOptions = {},
+): Promise<Media> {
   const { media_id, part_size, part_count } = await startUpload(file)
+
+  // One controller for all chunks: aborted by the user's Cancel, or by the first failing chunk.
+  const chunksController = new AbortController()
+  const abortChunks = () => chunksController.abort()
+  if (signal?.aborted) abortChunks()
+  signal?.addEventListener('abort', abortChunks, { once: true })
 
   try {
     const partNumbers = Array.from({ length: part_count }, (_, index) => index + 1)
     const { parts } = await getPartUrls(media_id, partNumbers)
 
     const completed: CompletedPart[] = []
-    let bytesDone = 0
+    const loadedByPart = new Map<number, number>()
+    const reportProgress = () => {
+      let total = 0
+      for (const loaded of loadedByPart.values()) total += loaded
+      onProgress?.(total)
+    }
 
-    for (const { part_number, url } of parts) {
+    await runWithConcurrency(parts, PARALLEL_CHUNKS, async ({ part_number, url }) => {
       const start = (part_number - 1) * part_size
       const chunk = file.slice(start, start + part_size)
       const etag = await putPart(
         url,
         chunk,
-        (loaded) => onProgress?.((bytesDone + loaded) / file.size),
-        signal,
+        (loaded) => {
+          loadedByPart.set(part_number, loaded)
+          reportProgress()
+        },
+        chunksController.signal,
       )
-      bytesDone += chunk.size
+      loadedByPart.set(part_number, chunk.size)
+      reportProgress()
       completed.push({ part_number, etag })
-    }
+    })
 
     return await completeUpload(media_id, completed)
   } catch (error) {
+    abortChunks()
     await abortUpload(media_id).catch(() => {})
     throw error
+  } finally {
+    signal?.removeEventListener('abort', abortChunks)
   }
+}
+
+/** Runs `worker` on every item, with at most `limit` running at the same time. */
+async function runWithConcurrency<T>(
+  items: T[],
+  limit: number,
+  worker: (item: T) => Promise<void>,
+): Promise<void> {
+  let next = 0
+  async function lane() {
+    while (next < items.length) {
+      const item = items[next]
+      next += 1
+      await worker(item)
+    }
+  }
+  const lanes = Array.from({ length: Math.min(limit, items.length) }, lane)
+  await Promise.all(lanes)
 }

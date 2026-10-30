@@ -4,11 +4,11 @@ import { useRef } from 'react'
 import { Button } from '@/components/ui/button'
 
 interface UploadButtonProps {
-  onSelect: (file: File) => void
+  onSelect: (files: File[]) => void
   disabled?: boolean
 }
 
-export function UploadButton({ onSelect, disabled }: UploadButtonProps) {
+export function UploadButton({ onSelect }: UploadButtonProps) {
   const inputRef = useRef<HTMLInputElement>(null)
 
   return (
@@ -16,15 +16,16 @@ export function UploadButton({ onSelect, disabled }: UploadButtonProps) {
       <input
         ref={inputRef}
         type="file"
+        multiple
         accept="video/*,audio/*"
         className="hidden"
         onChange={(event) => {
-          const file = event.target.files?.[0]
-          if (file) onSelect(file)
+          const files = Array.from(event.target.files ?? [])
+          if (files.length > 0) onSelect(files)
           event.target.value = ''
         }}
       />
-      <Button onClick={() => inputRef.current?.click()} disabled={disabled}>
+      <Button onClick={() => inputRef.current?.click()}>
         <Upload aria-hidden="true" />
         Upload media
       </Button>
