@@ -14,6 +14,7 @@ class UploadStart(BaseModel):
     content_type: str = Field(max_length=100)
     size_bytes: int
     title: str | None = Field(default=None, max_length=200)
+    duration_seconds: float | None = Field(default=None, ge=0, le=24 * 3600)
 
     @field_validator("content_type")
     @classmethod

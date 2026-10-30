@@ -60,6 +60,7 @@ def start_upload(
         filename=upload.filename,
         content_type=upload.content_type,
         size_bytes=upload.size_bytes,
+        duration_seconds=upload.duration_seconds,
         storage_key=storage_key,
         upload_id=upload_id,
     )
