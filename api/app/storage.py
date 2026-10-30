@@ -64,7 +64,7 @@ class Storage:
         self._client.abort_multipart_upload(Bucket=self._bucket, Key=key, UploadId=upload_id)
 
     def presign_download(self, key: str) -> str:
-        """Returns a short-lived URL the browser can GET the file from, for example in a video player."""
+        """Returns a short-lived download URL, for example for the video player."""
         return self._client.generate_presigned_url(
             "get_object",
             Params={"Bucket": self._bucket, "Key": key},

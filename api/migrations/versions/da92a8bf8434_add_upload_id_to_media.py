@@ -10,7 +10,6 @@ from collections.abc import Sequence
 import sqlalchemy as sa
 from alembic import op
 
-
 revision: str = "da92a8bf8434"
 down_revision: str | None = "dbb998e139e3"
 branch_labels: str | Sequence[str] | None = None

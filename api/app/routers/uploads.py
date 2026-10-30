@@ -32,7 +32,7 @@ def safe_filename(filename: str) -> str:
 
 def get_uploading_media(media_id: uuid.UUID, db: Session) -> Media:
     media = db.get(Media, media_id)
-    if media == None:
+    if media is None:
         raise HTTPException(status_code=404, detail="Upload not found")
     if media.status != "uploading" or media.upload_id is None:
         raise HTTPException(status_code=409, detail="This upload is no longer in progress")
