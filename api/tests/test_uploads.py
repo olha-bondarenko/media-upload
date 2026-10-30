@@ -122,9 +122,7 @@ def test_part_urls_returns_one_signed_url_per_part(client, storage):
 def test_part_urls_rejects_numbers_out_of_range(client, storage, part_number):
     media_id = start(client, size_bytes=VIDEO_26_MIB).json()["media_id"]
 
-    response = client.post(
-        f"/uploads/{media_id}/parts", json={"part_numbers": [part_number]}
-    )
+    response = client.post(f"/uploads/{media_id}/parts", json={"part_numbers": [part_number]})
 
     assert response.status_code == 422
 
