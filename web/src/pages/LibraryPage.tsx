@@ -9,11 +9,16 @@ import { Button } from '@/components/ui/button'
 import { useLibraryFilters } from '@/hooks/useLibraryFilters'
 import { LibraryFilters } from '@/components/LibraryFilters'
 import { Pagination } from '@/components/Pagination'
+import { UploadButton } from '@/components/UploadButton'
+import { useFileUpload } from '@/hooks/useFileUpload'
+import { UploadStatus } from '@/components/UploadStatus'
 
 const PAGE_SIZE = 10
 
 export function LibraryPage() {
   const filters = useLibraryFilters()
+  const upload = useFileUpload()
+  
   const params = {
     q: filters.q,
     status: filters.status,
@@ -31,7 +36,14 @@ export function LibraryPage() {
 
   return (
     <>
-      <PageHeader title="Library" description="Browse, search and manage your uploaded media." />
+      <PageHeader 
+        title="Library" 
+        description="Browse, search and manage your uploaded media."
+        actions={
+          <UploadButton onSelect={upload.upload} disabled={upload.state.status === 'uploading'} />
+        }
+      />
+      <UploadStatus state={upload.state} onCancel={upload.cancel} onDismiss={upload.dismiss} />
       <LibraryFilters
         q={filters.q}
         status={filters.status}
