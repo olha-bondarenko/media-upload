@@ -1,13 +1,20 @@
 import { apiFetch } from './api'
 import type { Media } from './types/media'
 import type { CompletedPart, PartUrl, UploadStartResponse } from './types/uploads'
+import { readMediaDuration } from './mediaDuration'
 
 const PARALLEL_CHUNKS = 4
 
-function startUpload(file: File): Promise<UploadStartResponse> {
+async function startUpload(file: File): Promise<UploadStartResponse> {
+  const durationSeconds = await readMediaDuration(file)
   return apiFetch('/uploads', {
     method: 'POST',
-    body: JSON.stringify({ filename: file.name, content_type: file.type, size_bytes: file.size }),
+    body: JSON.stringify({
+      filename: file.name,
+      content_type: file.type,
+      size_bytes: file.size,
+      duration_seconds: durationSeconds,
+    }),
   })
 }
 

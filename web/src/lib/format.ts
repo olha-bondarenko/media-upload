@@ -24,3 +24,16 @@ export function formatDuration(seconds: number | null): string {
 export function formatDate(iso: string, locale?: string): string {
   return new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(new Date(iso))
 }
+
+export function formatSpeed(bytesPerSecond: number): string {
+  return `${formatBytes(Math.round(bytesPerSecond))}/s`
+}
+
+export function formatTimeRemaining(seconds: number): string {
+  if (!Number.isFinite(seconds) || seconds < 0) return ''
+  if (seconds < 5) return 'almost done'
+  if (seconds < 60) return `${Math.ceil(seconds)} s left`
+  const minutes = Math.round(seconds / 60)
+  if (minutes < 60) return `${minutes} min left`
+  return `${Math.floor(minutes / 60)} h ${minutes % 60} min left`
+}
