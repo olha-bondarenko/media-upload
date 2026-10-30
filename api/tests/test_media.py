@@ -97,3 +97,19 @@ def test_playback_url_comes_from_source_url(client, make_media):
     response = client.get(f"/media/{media.id}")
 
     assert response.json()["playback_url"] == "https://example.com/a.mp4"
+
+
+def test_playback_url_is_signed_for_uploaded_files(client, make_media):
+    media = make_media(status="ready", storage_key="media/abc/clip.mp4")
+
+    response = client.get(f"/media/{media.id}")
+
+    assert response.json()["playback_url"] == "https://storage.test/media/abc/clip.mp4"
+
+
+def test_playback_url_is_empty_while_uploading(client, make_media):
+    media = make_media(status="uploading", storage_key="media/abc/clip.mp4")
+
+    response = client.get(f"/media/{media.id}")
+
+    assert response.json()["playback_url"] is None

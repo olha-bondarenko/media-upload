@@ -6,8 +6,9 @@ from botocore.exceptions import BotoCoreError, ClientError
 from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy.orm import Session
 
-from app.models.media import Media
 from app.db import get_db
+from app.models.media import Media
+from app.routers.media import to_media_out
 from app.schemas.media import MediaOut
 from app.schemas.uploads import (
     PART_SIZE,
@@ -131,7 +132,7 @@ def complete_upload(
     media.upload_id = None
     db.commit()
     db.refresh(media)
-    return media
+    return to_media_out(media, storage)
 
 
 @router.delete("/{media_id}", status_code=204)

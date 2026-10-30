@@ -7,6 +7,14 @@ from sqlalchemy.pool import StaticPool
 from app.db import Base, get_db
 from app.main import app
 from app.models.media import Media
+from app.storage import get_storage
+
+
+class FakeStorage:
+    """Stands in for R2 in tests: no network calls, predictable values."""
+
+    def presign_download(self, key: str) -> str:
+        return f"https://storage.test/{key}"
 
 
 @pytest.fixture
@@ -27,6 +35,7 @@ def db():
 @pytest.fixture
 def client(db):
     app.dependency_overrides[get_db] = lambda: db
+    app.dependency_overrides[get_storage] = lambda: FakeStorage()
     try:
         yield TestClient(app)
     finally:
