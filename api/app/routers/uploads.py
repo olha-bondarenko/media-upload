@@ -6,6 +6,7 @@ from botocore.exceptions import BotoCoreError, ClientError
 from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy.orm import Session
 
+from app.auth import require_editor
 from app.db import get_db
 from app.models.media import Media
 from app.routers.media import to_media_out
@@ -21,7 +22,7 @@ from app.schemas.uploads import (
 )
 from app.storage import CompletedPart, Storage, get_storage
 
-router = APIRouter(prefix="/uploads", tags=["uploads"])
+router = APIRouter(prefix="/uploads", tags=["uploads"], dependencies=[Depends(require_editor)])
 
 
 def safe_filename(filename: str) -> str:

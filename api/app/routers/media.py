@@ -1,9 +1,11 @@
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from botocore.exceptions import BotoCoreError, ClientError
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.auth import require_admin, require_editor
 from app.db import get_db
 from app.models.media import Media
 from app.schemas.media import MediaList, MediaOut, MediaStatus, MediaUpdate
@@ -63,7 +65,7 @@ def get_media(
     return to_media_out(get_media_or_404(media_id, db), storage)
 
 
-@router.patch("/{media_id}", response_model=MediaOut)
+@router.patch("/{media_id}", response_model=MediaOut, dependencies=[Depends(require_editor)])
 def update_media(
     media_id: uuid.UUID,
     changes: MediaUpdate,
@@ -79,3 +81,29 @@ def update_media(
     db.commit()
     db.refresh(media)
     return to_media_out(media, storage)
+
+
+@router.delete("/{media_id}", status_code=204, dependencies=[Depends(require_admin)])
+def delete_media(
+    media_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    storage: Storage = Depends(get_storage),
+) -> Response:
+    media = get_media_or_404(media_id, db)
+
+    if media.status == "uploading":
+        raise HTTPException(
+            status_code=409, detail="This file is still uploading; cancel the upload instead"
+        )
+
+    if media.storage_key:
+        try:
+            storage.delete_object(media.storage_key)
+        except (BotoCoreError, ClientError) as exc:
+            raise HTTPException(
+                status_code=502, detail="Couldn't delete the file from storage, try again"
+            ) from exc
+
+    db.delete(media)
+    db.commit()
+    return Response(status_code=204)

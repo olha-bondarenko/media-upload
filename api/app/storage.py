@@ -71,6 +71,10 @@ class Storage:
             ExpiresIn=URL_EXPIRY_SECONDS,
         )
 
+    def delete_object(self, key: str) -> None:
+        """Deletes a stored file. Succeeds even if the file is already gone."""
+        self._client.delete_object(Bucket=self._bucket, Key=key)
+
 
 @lru_cache
 def get_storage() -> Storage:

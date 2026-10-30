@@ -11,6 +11,7 @@ class Settings(BaseSettings):
 
     database_url: str = "postgresql://media:media@localhost:5432/media_console"
     cors_origins: str = "http://localhost:4000"
+    jwt_secret: str = "dev-only-secret"
 
     s3_endpoint_url: str | None = None
     s3_region: str = "auto"

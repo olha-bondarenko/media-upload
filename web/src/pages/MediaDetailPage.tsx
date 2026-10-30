@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, Pencil } from 'lucide-react'
-import { Link, useParams } from 'react-router-dom'
+import { ArrowLeft, Pencil, Trash2 } from 'lucide-react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 
 import { MediaDetails } from '@/components/MediaDetails'
 import { MediaPlayer } from '@/components/MediaPlayer'
@@ -8,10 +8,12 @@ import { PageHeader } from '@/components/PageHeader'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ApiError } from '@/lib/api'
-import { getMedia, updateMedia } from '@/lib/media'
+import { deleteMedia, getMedia, updateMedia } from '@/lib/media'
 import { useState } from 'react'
 import type { MediaUpdate } from '@/lib/types/media'
 import { MediaEditForm } from '@/components/MediaEditForm'
+import { useSession } from '@/hooks/useSession'
+import { can } from '@/lib/permissions'
 
 function isNotFound(error: unknown): boolean {
   return error instanceof ApiError && (error.status === 404 || error.status === 422)
@@ -53,6 +55,19 @@ export function MediaDetailPage() {
     queryKey: ['media', 'detail', id],
     queryFn: () => getMedia(id),
     retry: (failureCount, error) => !isNotFound(error) && failureCount < 3,
+  })
+
+  const { user } = useSession()
+  const navigate = useNavigate()
+  const [isConfirmingDelete, setIsConfirmingDelete] = useState(false)
+
+  const deleteMutation = useMutation({
+    mutationFn: () => deleteMedia(id),
+    onSuccess: () => {
+      queryClient.removeQueries({ queryKey: ['media', 'detail', id] })
+      queryClient.invalidateQueries({ queryKey: ['media', 'list'] })
+      navigate('/', { replace: true })
+    },
   })
 
   if (isPending) {
@@ -105,22 +120,75 @@ export function MediaDetailPage() {
           title={media.title}
           actions={
             !isEditing && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  mutation.reset()
-                  setSavedMessage('')
-                  setIsEditing(true)
-                }}
-              >
-                <Pencil aria-hidden="true" />
-                Edit
-              </Button>
+              <>
+                {can(user, 'edit') && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      mutation.reset()
+                      setSavedMessage('')
+                      setIsEditing(true)
+                    }}
+                  >
+                    <Pencil aria-hidden="true" />
+                    Edit
+                  </Button>
+                )}
+                {can(user, 'delete') && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      deleteMutation.reset()
+                      setIsConfirmingDelete(true)
+                    }}
+                    disabled={media.status === 'uploading'}
+                  >
+                    <Trash2 aria-hidden="true" />
+                    Delete
+                  </Button>
+                )}
+              </>
             )
           }
         />
       </div>
+            {isConfirmingDelete && can(user, 'delete') && (
+        <div
+          role="alertdialog"
+          aria-labelledby="delete-heading"
+          className="mb-6 flex flex-col gap-3 rounded-lg border border-destructive/30 bg-destructive/5 p-4"
+        >
+          <p id="delete-heading" className="text-sm font-medium">
+            Delete "{media.title}"? This can't be undone.
+          </p>
+          {deleteMutation.isError && (
+            <p role="alert" className="text-sm text-destructive">
+              Couldn't delete: {deleteMutation.error.message}
+            </p>
+          )}
+          <div className="flex gap-2">
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => deleteMutation.mutate()}
+              disabled={deleteMutation.isPending}
+              autoFocus
+            >
+              {deleteMutation.isPending ? 'Deleting…' : 'Delete'}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsConfirmingDelete(false)}
+              disabled={deleteMutation.isPending}
+            >
+              Cancel
+            </Button>
+          </div>
+        </div>
+      )}
       <p role="status" className="mb-4 text-sm text-emerald-700 dark:text-emerald-400">
         {savedMessage}
       </p>
