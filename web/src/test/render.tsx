@@ -3,13 +3,17 @@ import { render } from '@testing-library/react'
 import type { ReactElement } from 'react'
 import { MemoryRouter } from 'react-router-dom'
 
+import { UploadsProvider } from '@/contexts/UploadsProvider'
+
 /** Renders a component with the providers the app needs, starting at the given route. */
 export function renderApp(ui: ReactElement, { route = '/' }: { route?: string } = {}) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
 
   return render(
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter initialEntries={[route]}>{ui}</MemoryRouter>
+      <MemoryRouter initialEntries={[route]}>
+        <UploadsProvider>{ui}</UploadsProvider>
+      </MemoryRouter>
     </QueryClientProvider>,
   )
 }
