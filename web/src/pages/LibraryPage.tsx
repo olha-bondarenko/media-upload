@@ -11,12 +11,16 @@ import { LibraryFilters } from '@/components/LibraryFilters'
 import { Pagination } from '@/components/Pagination'
 import { UploadButton } from '@/components/UploadButton'
 import { useUploads } from '@/contexts/uploadsContext'
+import { useSession } from '@/hooks/useSession'
+import { can } from '@/lib/permissions'
 
 const PAGE_SIZE = 10
 
 export function LibraryPage() {
   const filters = useLibraryFilters()
   const uploads = useUploads()
+
+  const { user } = useSession()
   
   const params = {
     q: filters.q,
@@ -38,7 +42,13 @@ export function LibraryPage() {
       <PageHeader
         title="Library"
         description="Browse, search and manage your uploaded media."
-        actions={<UploadButton onSelect={uploads.addFiles} />}
+        actions={
+          can(user, 'upload') ? (
+            <UploadButton onSelect={uploads.addFiles} />
+          ) : (
+            <p className="text-sm text-muted-foreground">Switch to Editor or Admin to upload.</p>
+          )
+        }
       />
       <LibraryFilters
         q={filters.q}

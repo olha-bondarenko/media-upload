@@ -1,3 +1,5 @@
+import { getSession, setSession } from "./session"
+
 const API_URL = (import.meta.env.VITE_API_URL ?? 'http://localhost:8000').replace(/\/$/, '')
 
 export class ApiError extends Error {
@@ -32,16 +34,24 @@ async function readErrorMessage(response: Response): Promise<string> {
 
 /** Calls the API and returns the parsed JSON body, or throws ApiError on a non-2xx response. */
 export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
+  const session = getSession()
   const response = await fetch(`${API_URL}${path}`, {
     ...init,
-    headers: { 'Content-Type': 'application/json', ...init?.headers },
+    headers: {
+      'Content-Type': 'application/json',
+      ...(session ? { Authorization: `Bearer ${session.token}` } : {}),
+      ...init?.headers,
+    },
   })
+
+  if (response.status === 401 && session) {
+    setSession(null)
+  }
 
   if (!response.ok) {
     throw new ApiError(response.status, await readErrorMessage(response))
   }
 
   if (response.status === 204) return undefined as T
-
   return (await response.json()) as T
 }

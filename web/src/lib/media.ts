@@ -22,3 +22,7 @@ export function updateMedia(id: string, changes: MediaUpdate): Promise<Media> {
     body: JSON.stringify(changes),
   })
 }
+
+export function deleteMedia(id: string): Promise<void> {
+  return apiFetch(`/media/${encodeURIComponent(id)}`, { method: 'DELETE' })
+}

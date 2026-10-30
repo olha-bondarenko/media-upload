@@ -3,6 +3,7 @@ import { NavLink, Outlet } from 'react-router-dom'
 
 import { cn } from '@/lib/utils'
 import { UploadPanel } from './UploadPanel'
+import { ViewAsMenu } from './ViewAsMenu'
 
 function navLinkClass({ isActive }: { isActive: boolean }) {
   return cn(
@@ -35,6 +36,9 @@ export function AppShell() {
               Library
             </NavLink>
           </nav>
+          <div className="ml-auto">
+            <ViewAsMenu />
+          </div>
         </div>
       </header>
 
