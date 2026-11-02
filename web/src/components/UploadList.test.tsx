@@ -41,6 +41,7 @@ describe('UploadList', () => {
       'aria-valuenow',
       '50',
     )
+    expect(screen.getByText('5 B of 10 B')).toBeInTheDocument()
 
     await user.click(screen.getAllByRole('button', { name: 'Cancel' })[1])
 
