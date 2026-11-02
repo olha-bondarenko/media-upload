@@ -1,9 +1,11 @@
 import math
 import re
 import uuid
+from datetime import UTC, datetime, timedelta
 
 from botocore.exceptions import BotoCoreError, ClientError
 from fastapi import APIRouter, Depends, HTTPException, Response
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.auth import require_editor
@@ -12,6 +14,7 @@ from app.models.media import Media
 from app.routers.media import to_media_out
 from app.schemas.media import MediaOut
 from app.schemas.uploads import (
+    DEMO_STORAGE_LIMIT_BYTES,
     PART_SIZE,
     PartUrl,
     PartUrlsOut,
@@ -23,6 +26,8 @@ from app.schemas.uploads import (
 from app.storage import CompletedPart, Storage, get_storage
 
 router = APIRouter(prefix="/uploads", tags=["uploads"], dependencies=[Depends(require_editor)])
+
+STALE_UPLOAD_AGE = timedelta(days=1)
 
 
 def safe_filename(filename: str) -> str:
@@ -46,6 +51,18 @@ def start_upload(
     db: Session = Depends(get_db),
     storage: Storage = Depends(get_storage),
 ):
+    delete_stale_uploads(db, storage)
+
+    used_bytes = db.scalar(
+        select(func.coalesce(func.sum(Media.size_bytes), 0)).where(Media.storage_key.is_not(None))
+    )
+
+    if used_bytes + upload.size_bytes > DEMO_STORAGE_LIMIT_BYTES:
+        raise HTTPException(
+            status_code=507,
+            detail="The demo library is full. Ask an admin to delete something first.",
+        )
+
     media_id = uuid.uuid4()
     storage_key = f"media/{media_id}/{safe_filename(upload.filename)}"
 
@@ -155,3 +172,24 @@ def abort_upload(
     db.delete(media)
     db.commit()
     return Response(status_code=204)
+
+
+def delete_stale_uploads(db: Session, storage: Storage) -> None:
+    """Removes uploads that were started over a day ago and never finished."""
+    cutoff = datetime.now(UTC) - STALE_UPLOAD_AGE
+    stale = db.scalars(
+        select(Media).where(
+            Media.status == "uploading",
+            Media.upload_id.is_not(None),
+            Media.created_at < cutoff,
+        )
+    ).all()
+
+    for media in stale:
+        try:
+            storage.abort_multipart_upload(media.storage_key, media.upload_id)
+        except (BotoCoreError, ClientError):
+            pass  # the R2 lifecycle rule will clean it up
+        db.delete(media)
+
+    db.commit()

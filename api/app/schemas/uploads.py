@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field, field_validator
 
 MAX_UPLOAD_BYTES = 200 * 1000 * 1000  # 200 MB for the demo
 PART_SIZE = 10 * 1024 * 1024  # 10 MiB per chunk; R2 needs at least 5 MiB except for the last
+DEMO_STORAGE_LIMIT_BYTES = 2 * 1000**3  # 2 GB in total for the public demo
 
 
 class UploadStart(BaseModel):
