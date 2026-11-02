@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom'
 import { ProgressBar } from '@/components/ProgressBar'
 import { Button, buttonVariants } from '@/components/ui/button'
 import type { UploadItem } from '@/hooks/useUploadQueue'
-import { formatSpeed, formatTimeRemaining } from '@/lib/format'
+import { formatBytes, formatSpeed, formatTimeRemaining } from '@/lib/format'
 
 interface UploadListProps {
   items: UploadItem[]
@@ -13,7 +13,6 @@ interface UploadListProps {
 }
 
 export function UploadList({ items, onCancel, onDismiss }: UploadListProps) {
-
   return (
       <ul className="max-h-80 divide-y overflow-y-auto">
         {items.map((item) => (
@@ -26,22 +25,15 @@ export function UploadList({ items, onCancel, onDismiss }: UploadListProps) {
                 <CircleAlert className="size-4 shrink-0 text-destructive" aria-hidden="true" />
               )}
               <span className="min-w-0 flex-1 truncate font-medium">{item.file.name}</span>
-              <span className="shrink-0 tabular-nums text-muted-foreground">
-                {item.status === 'uploading' && (
-                  <p className="text-xs tabular-nums text-muted-foreground">
-                    {item.bytesPerSecond
-                      ? `${formatSpeed(item.bytesPerSecond)} · ${formatTimeRemaining(
-                          (item.file.size - item.uploadedBytes) / item.bytesPerSecond,
-                        )}`
-                      : 'Starting…'}
-                  </p>
-                )}
-              </span>
-
               {item.status === 'uploading' && (
-                <Button variant="outline" size="sm" onClick={() => onCancel(item.id)}>
-                  Cancel
-                </Button>
+                <>
+                  <span className="shrink-0 tabular-nums text-muted-foreground">
+                    {formatBytes(item.uploadedBytes)} of {formatBytes(item.file.size)}
+                  </span>
+                  <Button variant="outline" size="sm" onClick={() => onCancel(item.id)}>
+                    Cancel
+                  </Button>
+                </>
               )}
               {item.status === 'done' && item.media && (
                 <Link
@@ -64,10 +56,19 @@ export function UploadList({ items, onCancel, onDismiss }: UploadListProps) {
             </div>
 
             {item.status === 'uploading' && (
-              <ProgressBar
-                value={item.uploadedBytes / item.file.size}
-                label={`Uploading ${item.file.name}`}
-              />
+              <>
+                <ProgressBar
+                  value={item.uploadedBytes / item.file.size}
+                  label={`Uploading ${item.file.name}`}
+                />
+                <p className="text-xs tabular-nums text-muted-foreground">
+                  {item.bytesPerSecond
+                    ? `${formatSpeed(item.bytesPerSecond)} · ${formatTimeRemaining(
+                        (item.file.size - item.uploadedBytes) / item.bytesPerSecond,
+                      )}`
+                    : 'Starting…'}
+                </p>
+              </>
             )}
             {item.status === 'error' && (
               <p role="alert" className="text-destructive">

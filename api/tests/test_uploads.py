@@ -1,6 +1,9 @@
 import uuid
+from datetime import UTC, datetime, timedelta
 
 import pytest
+
+from app.schemas.uploads import DEMO_STORAGE_LIMIT_BYTES
 
 VIDEO_26_MIB = 26_214_400  # three 10 MiB parts: 10 + 10 + 6
 
@@ -60,6 +63,30 @@ def test_start_saves_nothing_when_storage_is_down(client, storage):
 
     assert response.status_code == 502
     assert client.get("/media").json()["total"] == 0
+
+
+def test_start_removes_uploads_stuck_for_over_a_day(client, storage, make_media):
+    now = datetime.now(UTC)
+    stuck = make_media(
+        status="uploading",
+        upload_id="old-upload",
+        storage_key="media/old/a.mp4",
+        created_at=now - timedelta(days=2),
+    )
+    recent = make_media(
+        status="uploading",
+        upload_id="recent-upload",
+        storage_key="media/recent/b.mp4",
+        created_at=now - timedelta(hours=1),
+    )
+    sample = make_media(status="uploading", created_at=now - timedelta(days=2))  # seed row
+
+    assert start(client).status_code == 201
+
+    assert storage.aborted == [("media/old/a.mp4", "old-upload")]
+    assert client.get(f"/media/{stuck.id}").status_code == 404
+    assert client.get(f"/media/{recent.id}").status_code == 200
+    assert client.get(f"/media/{sample.id}").status_code == 200
 
 
 # --- Part URLs ----------------------------------------------------------------
@@ -154,3 +181,15 @@ def test_abort_after_completion_returns_409(client, storage):
     response = client.delete(f"/uploads/{media_id}")
 
     assert response.status_code == 409
+
+
+def test_start_refuses_when_demo_storage_is_full(client, storage, make_media):
+    make_media(storage_key="media/x/big.mp4", size_bytes=DEMO_STORAGE_LIMIT_BYTES - 3)
+    make_media(size_bytes=700_000_000)  # a seed row without a file: doesn't count
+
+    assert start(client, size_bytes=3).status_code == 201  # fits exactly
+    response = start(client, size_bytes=1)
+
+    assert response.status_code == 507
+    assert "full" in response.json()["detail"]
+    assert len(storage.created) == 1  # the refused upload never reached storage
