@@ -1,4 +1,4 @@
-from sqlalchemy import func, select
+from sqlalchemy import select
 
 from app.db import SessionLocal
 from app.models import Media
@@ -62,16 +62,19 @@ SAMPLES = [
 
 
 def seed() -> None:
+
     with SessionLocal() as db:
-        existing = db.scalar(select(func.count()).select_from(Media))
-        if existing:
-            print(f"Skipped: the media table already has {existing} rows.")
+        existing_titles = set(db.scalars(select(Media.title)).all())
+        missing = [sample for sample in SAMPLES if sample["title"] not in existing_titles]
+
+        if not missing:
+            print("Nothing to restore.")
             return
 
-        for sample in SAMPLES:
+        for sample in missing:
             db.add(Media(**sample))
         db.commit()
-        print(f"Added {len(SAMPLES)} media items.")
+        print(f"Added {len(missing)} missing samples.")
 
 
 if __name__ == "__main__":
