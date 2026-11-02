@@ -71,6 +71,7 @@ export function MediaEditForm({ media, isSaving, error, onSave, onCancel }: Medi
           onChange={(event) => setTitle(event.target.value)}
           aria-invalid={Boolean(showError('title'))}
           aria-describedby={showError('title') ? 'edit-title-error' : undefined}
+          /* eslint-disable-next-line jsx-a11y/no-autofocus -- the user just pressed Edit, so focus moves into the form they opened */
           autoFocus
         />
       </Field>

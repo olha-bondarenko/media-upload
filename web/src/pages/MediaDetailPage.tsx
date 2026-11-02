@@ -174,6 +174,7 @@ export function MediaDetailPage() {
               size="sm"
               onClick={() => deleteMutation.mutate()}
               disabled={deleteMutation.isPending}
+              /* eslint-disable-next-line jsx-a11y/no-autofocus -- the user just pressed Delete, focus the safe choice so a double Enter can't delete */
               autoFocus
             >
               {deleteMutation.isPending ? 'Deleting…' : 'Delete'}
