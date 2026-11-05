@@ -9,11 +9,12 @@ import { Button, buttonVariants } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ApiError } from '@/lib/api'
 import { deleteMedia, getMedia, updateMedia } from '@/lib/media'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import type { MediaUpdate } from '@/lib/types/media'
 import { MediaEditForm } from '@/components/MediaEditForm'
 import { useSession } from '@/hooks/useSession'
 import { can } from '@/lib/permissions'
+import { useReturnFocus } from '@/hooks/useReturnFocus'
 
 function isNotFound(error: unknown): boolean {
   return error instanceof ApiError && (error.status === 404 || error.status === 422)
@@ -69,6 +70,12 @@ export function MediaDetailPage() {
       navigate('/', { replace: true })
     },
   })
+
+  const editButtonRef = useRef<HTMLButtonElement>(null)
+  const deleteButtonRef = useRef<HTMLButtonElement>(null)
+
+  useReturnFocus(isEditing, editButtonRef)
+  useReturnFocus(isConfirmingDelete, deleteButtonRef)
 
   if (isPending) {
     return (
@@ -130,6 +137,7 @@ export function MediaDetailPage() {
                       setSavedMessage('')
                       setIsEditing(true)
                     }}
+                    ref={editButtonRef}
                   >
                     <Pencil aria-hidden="true" />
                     Edit
@@ -144,6 +152,7 @@ export function MediaDetailPage() {
                       setIsConfirmingDelete(true)
                     }}
                     disabled={media.status === 'uploading'}
+                    ref={deleteButtonRef}
                   >
                     <Trash2 aria-hidden="true" />
                     Delete
@@ -174,6 +183,7 @@ export function MediaDetailPage() {
               size="sm"
               onClick={() => deleteMutation.mutate()}
               disabled={deleteMutation.isPending}
+              /* eslint-disable-next-line jsx-a11y/no-autofocus -- the user just pressed Delete, focus the safe choice so a double Enter can't delete */
               autoFocus
             >
               {deleteMutation.isPending ? 'Deleting…' : 'Delete'}
@@ -209,3 +219,4 @@ export function MediaDetailPage() {
     </>
   )
 }
+
