@@ -1,42 +1,109 @@
 # Media Upload
 
-A small video-platform dashboard: upload, manage and preview media, with role-based permissions.
+A video library where large files upload **straight from the browser to object storage**, in parallel
+chunks, with live progress, cancel, and role-based permissions.
 
-- `web/`: React, TypeScript and Vite frontend
-- `api/`: FastAPI backend with Postgres (SQLAlchemy, Alembic)
+**[Live demo](https://media-upload-six.vercel.app/)** · **[Case study](docs/case-study.md)**
 
-> Status: day 1 scaffold. The frontend shows an app shell and checks that it can reach the API.
+> The demo has no sign-up: use **View as** in the header to switch between Guest, Viewer, Editor
+> and Admin. The API runs on a free tier and may take ~30 seconds to wake up on the first visit.
 
-## Prerequisites
+## Features
 
-- Node.js 22+
-- [uv](https://docs.astral.sh/uv/) (installs Python and the API dependencies)
-- Docker (for local Postgres)
+- **Chunked direct uploads** up to 200 MB: the file is split into 10 MiB parts, four are sent in
+  parallel straight to Cloudflare R2 through presigned URLs, so file bytes never touch the API.
+- **Live progress** with speed and time remaining, **cancel** at any point, several files at once.
+- **Global upload panel**: uploads keep running while you browse, and the browser warns before you
+  close a tab mid-upload.
+- **Library** with search, status filter and pagination, all kept in the URL (shareable, back
+  button works).
+- **Detail page** with a player, inline editing (title, description, tags) and delete.
+- **Roles**: guests and viewers browse, editors upload and edit, admins also delete. Enforced by
+  the API with signed tokens; the UI only mirrors it.
+- **Accessible**: keyboard-only flows, focus management, labelled controls, checked with
+  eslint-plugin-jsx-a11y and axe.
 
-## First run
+## Architecture
+
+```mermaid
+flowchart LR
+    B["Browser<br/>React + TypeScript"]
+    A["API<br/>FastAPI on Render"]
+    D[("Postgres<br/>Neon")]
+    S[("Object storage<br/>Cloudflare R2")]
+
+    B -- "JSON: metadata, upload URLs, auth" --> A
+    A -- "SQLAlchemy" --> D
+    A -- "multipart API, presigned URLs" --> S
+    B -- "PUT chunks directly, GET playback" --> S
+```
+
+How one upload flows:
+
+```mermaid
+sequenceDiagram
+    participant B as Browser
+    participant A as API
+    participant S as R2
+
+    B->>A: POST /uploads (name, type, size)
+    A->>S: create multipart upload
+    A-->>B: media id, part size, part count
+    B->>A: POST /uploads/{id}/parts
+    A-->>B: presigned URL per part
+    par up to 4 at a time
+        B->>S: PUT part (XHR, progress events)
+        S-->>B: ETag
+    end
+    B->>A: POST /uploads/{id}/complete (part numbers + ETags)
+    A->>S: complete multipart upload
+    A-->>B: media, status "ready"
+    Note over B,A: On error or Cancel: DELETE /uploads/{id} aborts in storage and removes the row
+```
+
+## Tech stack
+
+|                    |                                                                                            |
+| ------------------ | ------------------------------------------------------------------------------------------ |
+| **Frontend**       | React 19, TypeScript (strict), Vite, TanStack Query, React Router, Tailwind CSS, shadcn/ui |
+| **Backend**        | Python 3.12, FastAPI, SQLAlchemy 2, Alembic, Pydantic, boto3, PyJWT                        |
+| **Infrastructure** | Vercel (frontend), Render (API, Docker), Neon (Postgres), Cloudflare R2 (files)            |
+| **Quality**        | Vitest + Testing Library, pytest, ESLint + jsx-a11y, Ruff, GitHub Actions, pre-commit hook |
+
+## Testing
+
+- **API (pytest):** every endpoint, the full upload flow against a fake storage, storage failures,
+  token validation, and a permission table of every role against every action.
+- **Frontend (Vitest + Testing Library):** the upload engine (chunking, ETags, clean-up on failure
+  and cancel) with a fake `XMLHttpRequest`, the edit form, the upload list, the library page,
+  formatting and permissions.
+
+CI runs lint, format, type checks, build and both test suites on every pull request.
+
+## Run it locally
+
+Prerequisites: Node.js 22+, [uv](https://docs.astral.sh/uv/), Docker.
 
 ```bash
 # 1. Database
 docker compose up -d
 
-# 2. API (http://localhost:8000, interactive docs at /docs)
+# 2. API: http://localhost:8000 (docs at /docs)
 cd api
-cp .env.example .env
+cp .env.example .env          # fill in the S3_* values for uploads
 uv sync
 uv run alembic upgrade head
+uv run python -m app.seed     # sample data, safe to run again
 uv run uvicorn app.main:app --reload
 
-# 3. Frontend (http://localhost:4000), in a second terminal
+# 3. Frontend: http://localhost:4000, in a second terminal
 cd web
 cp .env.example .env.local
 npm install
 npm run dev
 ```
 
-The header should show "API connected". Commit the generated `api/uv.lock` and
-`web/package-lock.json`: CI and the Docker build rely on them.
-
-## Checks
+### Checks
 
 |        | API (`cd api`)         | Frontend (`cd web`) |
 | ------ | ---------------------- | ------------------- |
@@ -45,9 +112,15 @@ The header should show "API connected". Commit the generated `api/uv.lock` and
 | Format | `uv run ruff format .` |                     |
 | Build  |                        | `npm run build`     |
 
-GitHub Actions runs all of these on every push and pull request (`.github/workflows/ci.yml`).
+### Storage setup
 
-## Database migrations
+Create an R2 (or S3) bucket and an access key, and fill in the `S3_*` values in `api/.env`. The
+bucket needs:
+
+- a **CORS rule** allowing `PUT` and `GET` from the frontend origin and exposing the `ETag` header;
+- a **lifecycle rule** that aborts incomplete multipart uploads after one day.
+
+### Database migrations
 
 ```bash
 cd api
@@ -55,22 +128,6 @@ uv run alembic revision --autogenerate -m "describe the change"
 uv run alembic upgrade head
 ```
 
-New models must be imported in `app/models/__init__.py` so autogenerate can see them.
+## Demo limits
 
-## Deploying
-
-Three pieces, each with a free tier at the time of writing (check current terms):
-
-1. **Postgres**: create a database (for example on Neon) and copy its connection URL.
-2. **API**: deploy `api/` from its `Dockerfile` (for example on Fly.io or Render). Set
-   `DATABASE_URL` and `CORS_ORIGINS` (the frontend's URL). The container runs migrations on start.
-3. **Frontend**: deploy `web/` as a static site (for example on Vercel or Cloudflare Pages) with
-   build command `npm run build`, output directory `dist`, and `VITE_API_URL` set to the API's URL.
-   Add a rewrite of all paths to `/index.html` so client-side routes work on refresh.
-
-## Storage
-
-Media files go to S3-compatible object storage (Cloudflare R2 or AWS S3), uploaded directly from
-the browser. Create a bucket and an access key, then fill in the `S3_*` values in `api/.env`.
-The bucket needs a CORS rule that allows `PUT` from the frontend origin and exposes the `ETag`
-header, which multipart uploads need.
+Because the demo is public: files up to 200 MB, 2 GB in total, uploads abandoned for over a day are cleaned up automatically, and `app.seed` restores any deleted sample items.
